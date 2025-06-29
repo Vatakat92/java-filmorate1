@@ -25,7 +25,7 @@ public final class UserController {
      * Список всех пользователей в памяти приложения.
      */
     private final List<User> users = new ArrayList<>();
-    private int userIdCounter = 0;
+    private int userIdCounter = 1;
 
     /**
      * Создаёт нового пользователя.

@@ -23,7 +23,7 @@ public final class FilmController {
      * Список всех фильмов в памяти приложения.
      */
     private final List<Film> films = new ArrayList<>();
-    private int filmIdCounter = 0;
+    private int filmIdCounter = 1;
 
     /**
      * Добавляет новый фильм.
