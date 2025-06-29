@@ -25,6 +25,7 @@ public final class UserController {
      * Список всех пользователей в памяти приложения.
      */
     private final List<User> users = new ArrayList<>();
+    private int userIdCounter = 0;
 
     /**
      * Создаёт нового пользователя.
@@ -36,6 +37,7 @@ public final class UserController {
         if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
+        user.setId(userIdCounter++);
         users.add(user);
         log.info("Пользователь добавлен: {}", user);
         return user;
@@ -48,9 +50,6 @@ public final class UserController {
      */
     @PutMapping
     public User updateUser(@Valid @RequestBody final User user) {
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
         for (int i = 0; i < users.size(); i++) {
             if (users.get(i).getId() == user.getId()) {
                 users.set(i, user);
@@ -58,9 +57,7 @@ public final class UserController {
                 return user;
             }
         }
-        users.add(user);
-        log.info("Пользователь добавлен (через update): {}", user);
-        return user;
+        throw new IllegalArgumentException("Пользователь с id=" + user.getId() + " не найден");
     }
 
     /**

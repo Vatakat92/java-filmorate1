@@ -23,6 +23,7 @@ public final class FilmController {
      * Список всех фильмов в памяти приложения.
      */
     private final List<Film> films = new ArrayList<>();
+    private int filmIdCounter = 0;
 
     /**
      * Добавляет новый фильм.
@@ -32,12 +33,7 @@ public final class FilmController {
      */
     @PostMapping
     public Film addFilm(@Valid @RequestBody final Film film) {
-        for (Film f : films) {
-            if (f.getId() == film.getId()) {
-                throw new IllegalArgumentException(
-                    "Фильм с таким id уже существует");
-            }
-        }
+        film.setId(filmIdCounter++);
         films.add(film);
         return film;
     }
