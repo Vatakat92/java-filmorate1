@@ -9,15 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 class FilmorateApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void shouldLoadContext() {
 	}
 
 	@Test
-	void applicationStartsSuccessfully() {
+	void shouldStartApplicationSuccessfully() {
 	}
 
 	@Test
-	void mainMethodRunsWithoutExceptions() {
+	void shouldRunMainMethodWithoutExceptions() {
 		assertDoesNotThrow(() -> FilmorateApplication.main(new String[]{}));
 	}
 }
