@@ -5,6 +5,9 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+
 import java.util.*;
 
 @Service
@@ -32,27 +35,20 @@ public class UserService {
 
     public List<User> getFriends(int userId) {
         User user = getUserOrThrow(userId);
-        List<User> friends = new ArrayList<>();
-        for (Integer friendId : user.getFriends()) {
-            if (userStorage.containsUser(friendId)) {
-                friends.add(getUserOrThrow(friendId));
-            }
-        }
-        return friends;
+        return user.getFriends().stream()
+                .filter(userStorage::containsUser)
+                .map(this::getUserOrThrow)
+                .toList();
     }
 
     public List<User> getCommonFriends(int userId, int otherId) {
         User user = getUserOrThrow(userId);
         User other = getUserOrThrow(otherId);
-        Set<Integer> commonIds = new HashSet<>(user.getFriends());
-        commonIds.retainAll(other.getFriends());
-        List<User> commonFriends = new ArrayList<>();
-        for (Integer id : commonIds) {
-            if (userStorage.containsUser(id)) {
-                commonFriends.add(getUserOrThrow(id));
-            }
-        }
-        return commonFriends;
+        return user.getFriends().stream()
+                .filter(other.getFriends()::contains)
+                .filter(userStorage::containsUser)
+                .map(this::getUserOrThrow)
+                .toList();
     }
 
     public User createUser(User user) {
@@ -61,7 +57,7 @@ public class UserService {
 
     public User updateUser(User user) {
         if (!userStorage.containsUser(user.getId())) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Пользователь с id = " + user.getId() + " не найден");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Пользователь с id = " + user.getId() + " не найден");
         }
         return userStorage.updateUser(user);
     }
@@ -78,6 +74,6 @@ public class UserService {
         return userStorage.getAllUsers().stream()
                 .filter(u -> u.getId() == id)
                 .findFirst()
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Пользователь с id = " + id + " не найден"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Пользователь с id = " + id + " не найден"));
     }
 }

@@ -39,9 +39,9 @@ public class GlobalExceptionHandler {
         throw ex;
     }
 
-    @ExceptionHandler(Exception.class)
+    @ExceptionHandler(Throwable.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public void handleOtherExceptions(Exception ex) {
+    public void handleOtherExceptions(Throwable ex) {
         log.error("Internal server error", ex);
         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Внутренняя ошибка сервера: " + ex.getMessage());
     }
