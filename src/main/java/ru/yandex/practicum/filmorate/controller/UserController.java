@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,12 +16,12 @@ import ru.yandex.practicum.filmorate.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
 
+@Slf4j
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/users")
 public class UserController {
     private final UserService userService;
-    private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserController.class);
 
     @PostMapping
     public User createUser(@Valid @RequestBody final User user) {
