@@ -1,19 +1,14 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
-import jakarta.validation.Valid;
 import java.util.List;
 
 @Slf4j
@@ -24,20 +19,17 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public User createUser(@Valid @RequestBody final User user) {
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
+    public ResponseEntity<User> createUser(@Valid @RequestBody final User user) {
         User createdUser = userService.createUser(user);
         log.info("Пользователь добавлен: {}", createdUser);
-        return createdUser;
+        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
     @PutMapping
-    public User updateUser(@Valid @RequestBody final User user) {
+    public ResponseEntity<User> updateUser(@Valid @RequestBody final User user) {
         User updatedUser = userService.updateUser(user);
         log.info("Пользователь обновлён: {}", updatedUser);
-        return updatedUser;
+        return new ResponseEntity<>(updatedUser, HttpStatus.OK);
     }
 
     @GetMapping
@@ -51,11 +43,13 @@ public class UserController {
     }
 
     @PutMapping("/{id}/friends/{friendId}")
+    @ResponseStatus(HttpStatus.OK)
     public void addFriend(@PathVariable int id, @PathVariable int friendId) {
         userService.addFriend(id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
+    @ResponseStatus(HttpStatus.OK)
     public void removeFriend(@PathVariable int id, @PathVariable int friendId) {
         userService.removeFriend(id, friendId);
     }
