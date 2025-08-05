@@ -12,6 +12,10 @@ import java.util.Optional;
 @Repository
 public class JdbcGenreRepository implements GenreRepository {
 
+    private static final String SELECT_GENRE_BY_ID_SQL = "SELECT * FROM genres WHERE id = ?";
+    private static final String SELECT_ALL_GENRES_SQL = "SELECT * FROM genres ORDER BY id";
+    private static final String SELECT_GENRES_BY_IDS_SQL = "SELECT * FROM genres WHERE id IN (%s) ORDER BY id";
+
     private final JdbcTemplate jdbcTemplate;
 
     public JdbcGenreRepository(JdbcTemplate jdbcTemplate) {
@@ -20,15 +24,13 @@ public class JdbcGenreRepository implements GenreRepository {
 
     @Override
     public Optional<Genre> findById(int id) {
-        String sql = "SELECT * FROM genres WHERE id = ?";
-        List<Genre> genres = jdbcTemplate.query(sql, this::mapRowToGenre, id);
+        List<Genre> genres = jdbcTemplate.query(SELECT_GENRE_BY_ID_SQL, this::mapRowToGenre, id);
         return genres.isEmpty() ? Optional.empty() : Optional.of(genres.getFirst());
     }
 
     @Override
     public List<Genre> findAll() {
-        String sql = "SELECT * FROM genres ORDER BY id";
-        return jdbcTemplate.query(sql, this::mapRowToGenre);
+        return jdbcTemplate.query(SELECT_ALL_GENRES_SQL, this::mapRowToGenre);
     }
 
     @Override
@@ -37,7 +39,7 @@ public class JdbcGenreRepository implements GenreRepository {
             return List.of();
         }
         String placeholders = String.join(",", ids.stream().map(id -> "?").toArray(String[]::new));
-        String sql = "SELECT * FROM genres WHERE id IN (" + placeholders + ") ORDER BY id";
+        String sql = String.format(SELECT_GENRES_BY_IDS_SQL, placeholders);
         return jdbcTemplate.query(sql, this::mapRowToGenre, ids.toArray());
     }
 

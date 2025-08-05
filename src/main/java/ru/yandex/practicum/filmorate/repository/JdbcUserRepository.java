@@ -24,6 +24,40 @@ public class JdbcUserRepository implements UserRepository {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcUserRepository.class);
 
+    // SQL queries constants
+    private static final String INSERT_USER_SQL =
+            "INSERT INTO users (email, login, name, birthday) VALUES (:email, :login, :name, :birthday)";
+
+    private static final String UPDATE_USER_SQL =
+            "UPDATE users SET email = :email, login = :login, name = :name, birthday = :birthday WHERE id = :id";
+
+    private static final String SELECT_USER_BY_ID_SQL =
+            "SELECT * FROM users WHERE id = :id";
+
+    private static final String SELECT_ALL_USERS_SQL =
+            "SELECT * FROM users";
+
+    private static final String ADD_FRIEND_SQL =
+            "MERGE INTO friendships (user_id, friend_id, status) VALUES (:userId, :friendId, :status)";
+
+    private static final String REMOVE_FRIEND_SQL =
+            "DELETE FROM friendships WHERE user_id = :userId AND friend_id = :friendId";
+
+    private static final String SELECT_FRIENDS_SQL =
+            "SELECT u.* FROM users u " +
+            "JOIN friendships f ON u.id = f.friend_id " +
+            "WHERE f.user_id = :userId AND f.status = :status";
+
+    private static final String SELECT_COMMON_FRIENDS_SQL =
+            "SELECT u.* FROM users u " +
+            "JOIN friendships f1 ON u.id = f1.friend_id " +
+            "JOIN friendships f2 ON u.id = f2.friend_id " +
+            "WHERE f1.user_id = :userId1 AND f2.user_id = :userId2 " +
+            "AND f1.status = :status AND f2.status = :status";
+
+    private static final String SELECT_USER_FRIENDS_SQL =
+            "SELECT friend_id FROM friendships WHERE user_id = :userId";
+
     private final NamedParameterJdbcOperations jdbc;
 
     public JdbcUserRepository(NamedParameterJdbcOperations jdbc) {
@@ -33,7 +67,6 @@ public class JdbcUserRepository implements UserRepository {
     @Override
     public User save(User user) {
         log.debug("Saving user: {}", user);
-        String sql = "INSERT INTO users (email, login, name, birthday) VALUES (:email, :login, :name, :birthday)";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("email", user.getEmail())
                 .addValue("login", user.getLogin())
@@ -41,7 +74,7 @@ public class JdbcUserRepository implements UserRepository {
                 .addValue("birthday", user.getBirthday());
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbc.update(sql, params, keyHolder, new String[]{"id"});
+        jdbc.update(INSERT_USER_SQL, params, keyHolder, new String[]{"id"});
 
         Number key = keyHolder.getKey();
         if (key == null) {
@@ -56,7 +89,6 @@ public class JdbcUserRepository implements UserRepository {
     @Override
     public User update(User user) {
         log.debug("Updating user: {}", user);
-        String sql = "UPDATE users SET email = :email, login = :login, name = :name, birthday = :birthday WHERE id = :id";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("email", user.getEmail())
                 .addValue("login", user.getLogin())
@@ -64,7 +96,7 @@ public class JdbcUserRepository implements UserRepository {
                 .addValue("birthday", user.getBirthday())
                 .addValue("id", user.getId());
 
-        int updatedRows = jdbc.update(sql, params);
+        int updatedRows = jdbc.update(UPDATE_USER_SQL, params);
         if (updatedRows == 0) {
             log.warn("User with id {} not found", user.getId());
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -76,9 +108,8 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public Optional<User> findById(int id) {
-        String sql = "SELECT * FROM users WHERE id = :id";
         MapSqlParameterSource params = new MapSqlParameterSource("id", id);
-        List<User> users = jdbc.query(sql, params, this::mapRowToUser);
+        List<User> users = jdbc.query(SELECT_USER_BY_ID_SQL, params, this::mapRowToUser);
         if (users.isEmpty()) {
             return Optional.empty();
         }
@@ -89,8 +120,7 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public List<User> findAll() {
-        String sql = "SELECT * FROM users";
-        List<User> users = jdbc.query(sql, this::mapRowToUser);
+        List<User> users = jdbc.query(SELECT_ALL_USERS_SQL, this::mapRowToUser);
         for (User user : users) {
             user.setFriends(loadFriends(user.getId()));
         }
@@ -100,55 +130,44 @@ public class JdbcUserRepository implements UserRepository {
     @Override
     public void addFriend(int userId, int friendId) {
         log.debug("Adding friend {} to user {}", friendId, userId);
-        String sql = "MERGE INTO friendships (user_id, friend_id, status) VALUES (:userId, :friendId, :status)";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("userId", userId)
                 .addValue("friendId", friendId)
                 .addValue("status", FriendshipStatus.CONFIRMED.name());
-        jdbc.update(sql, params);
+        jdbc.update(ADD_FRIEND_SQL, params);
         log.debug("Friend added");
     }
 
     @Override
     public void removeFriend(int userId, int friendId) {
         log.debug("Removing friend {} from user {}", friendId, userId);
-        String sql = "DELETE FROM friendships WHERE user_id = :userId AND friend_id = :friendId";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("userId", userId)
                 .addValue("friendId", friendId);
-        jdbc.update(sql, params);
+        jdbc.update(REMOVE_FRIEND_SQL, params);
         log.debug("Friend removed");
     }
 
     @Override
     public List<User> getFriends(int userId) {
-        String sql = "SELECT u.* FROM users u " +
-                    "JOIN friendships f ON u.id = f.friend_id " +
-                    "WHERE f.user_id = :userId AND f.status = :status";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("userId", userId)
                 .addValue("status", FriendshipStatus.CONFIRMED.name());
-        return jdbc.query(sql, params, this::mapRowToUser);
+        return jdbc.query(SELECT_FRIENDS_SQL, params, this::mapRowToUser);
     }
 
     @Override
     public List<User> getCommonFriends(int userId1, int userId2) {
-        String sql = "SELECT u.* FROM users u " +
-                    "JOIN friendships f1 ON u.id = f1.friend_id " +
-                    "JOIN friendships f2 ON u.id = f2.friend_id " +
-                    "WHERE f1.user_id = :userId1 AND f2.user_id = :userId2 " +
-                    "AND f1.status = :status AND f2.status = :status";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("userId1", userId1)
                 .addValue("userId2", userId2)
                 .addValue("status", FriendshipStatus.CONFIRMED.name());
-        return jdbc.query(sql, params, this::mapRowToUser);
+        return jdbc.query(SELECT_COMMON_FRIENDS_SQL, params, this::mapRowToUser);
     }
 
     private Set<Integer> loadFriends(int userId) {
-        String sql = "SELECT friend_id FROM friendships WHERE user_id = :userId";
         MapSqlParameterSource params = new MapSqlParameterSource("userId", userId);
-        return new HashSet<>(jdbc.query(sql, params, (rs, rowNum) -> rs.getInt("friend_id")));
+        return new HashSet<>(jdbc.query(SELECT_USER_FRIENDS_SQL, params, (rs, rowNum) -> rs.getInt("friend_id")));
     }
 
     private User mapRowToUser(ResultSet rs, int rowNum) throws SQLException {

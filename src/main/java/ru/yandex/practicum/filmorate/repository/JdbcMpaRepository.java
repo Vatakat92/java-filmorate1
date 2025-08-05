@@ -12,6 +12,9 @@ import java.util.Optional;
 @Repository
 public class JdbcMpaRepository implements MpaRepository {
 
+    private static final String SELECT_MPA_BY_ID_SQL = "SELECT * FROM mpa_ratings WHERE id = ?";
+    private static final String SELECT_ALL_MPA_SQL = "SELECT * FROM mpa_ratings ORDER BY id";
+
     private final JdbcTemplate jdbcTemplate;
 
     public JdbcMpaRepository(JdbcTemplate jdbcTemplate) {
@@ -20,15 +23,13 @@ public class JdbcMpaRepository implements MpaRepository {
 
     @Override
     public Optional<Mpa> findById(int id) {
-        String sql = "SELECT * FROM mpa_ratings WHERE id = ?";
-        List<Mpa> mpaList = jdbcTemplate.query(sql, this::mapRowToMpa, id);
+        List<Mpa> mpaList = jdbcTemplate.query(SELECT_MPA_BY_ID_SQL, this::mapRowToMpa, id);
         return mpaList.isEmpty() ? Optional.empty() : Optional.of(mpaList.getFirst());
     }
 
     @Override
     public List<Mpa> findAll() {
-        String sql = "SELECT * FROM mpa_ratings ORDER BY id";
-        return jdbcTemplate.query(sql, this::mapRowToMpa);
+        return jdbcTemplate.query(SELECT_ALL_MPA_SQL, this::mapRowToMpa);
     }
 
     private Mpa mapRowToMpa(ResultSet rs, int rowNum) throws SQLException {
