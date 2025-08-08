@@ -4,12 +4,14 @@ import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import lombok.Data;
+import ru.yandex.practicum.filmorate.validation.ReleaseDateValid;
 
 @Data
 public class Film {
@@ -27,4 +29,7 @@ public class Film {
             + "положительным числом")
     private int duration;
     private Set<Integer> likes = new HashSet<>();
+    private Set<Genre> genres = new HashSet<>();
+    @JsonProperty("mpa")
+    private Mpa mpaRating;
 }
