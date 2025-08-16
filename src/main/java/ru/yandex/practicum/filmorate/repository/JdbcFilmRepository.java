@@ -75,7 +75,7 @@ public class JdbcFilmRepository implements FilmRepository {
 
     @Override
     public Film save(Film film) {
-        log.debug("Saving film: {}", film);
+        log.debug("Сохранение фильма: {}", film);
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("name", film.getName())
                 .addValue("description", film.getDescription())
@@ -88,19 +88,19 @@ public class JdbcFilmRepository implements FilmRepository {
 
         Number key = keyHolder.getKey();
         if (key == null) {
-            throw new RuntimeException("Failed to get generated key for film");
+            throw new RuntimeException("Не удалось получить сгенерированный идентификатор фильма");
         }
         int id = key.intValue();
         film.setId(id);
 
         saveGenres(film);
-        log.debug("Film saved: {}", film);
+        log.debug("Фильм сохранён: {}", film);
         return film;
     }
 
     @Override
     public Film update(Film film) {
-        log.debug("Updating film: {}", film);
+        log.debug("Обновление фильма: {}", film);
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("name", film.getName())
                 .addValue("description", film.getDescription())
@@ -111,12 +111,12 @@ public class JdbcFilmRepository implements FilmRepository {
 
         int updatedRows = jdbc.update(UPDATE_FILM_SQL, params);
         if (updatedRows == 0) {
-            log.warn("Film with id {} not found", film.getId());
+            log.warn("Фильм не найден id={}", film.getId());
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Фильм с id = " + film.getId() + " не найден");
         }
         saveGenres(film);
-        log.debug("Film updated: {}", film);
+        log.debug("Фильм обновлён: {}", film);
 
         film.setGenres(loadGenres(film.getId()));
         film.setLikes(loadLikes(film.getId()));
@@ -138,28 +138,27 @@ public class JdbcFilmRepository implements FilmRepository {
 
     private List<Film> findFilmsWithCondition(String whereClause, MapSqlParameterSource params) {
         String sql = SELECT_FILMS_BASE_SQL + whereClause + " ORDER BY f.id, g.id, fl.user_id";
-        List<Film> films = jdbc.query(sql, params, filmResultSetExtractor);
-        return films != null ? films : new ArrayList<>();
+        return jdbc.query(sql, params, filmResultSetExtractor);
     }
 
     @Override
     public void addLike(int filmId, int userId) {
-        log.debug("Adding like to film {} from user {}", filmId, userId);
+        log.debug("Добавление лайка к фильму {} от пользователя {}", filmId, userId);
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("filmId", filmId)
                 .addValue("userId", userId);
         jdbc.update(ADD_LIKE_SQL, params);
-        log.debug("Like added");
+        log.debug("Лайк добавлен");
     }
 
     @Override
     public void removeLike(int filmId, int userId) {
-        log.debug("Removing like from film {} by user {}", filmId, userId);
+        log.debug("Удаление лайка у фильма {} пользователем {}", filmId, userId);
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("filmId", filmId)
                 .addValue("userId", userId);
         jdbc.update(REMOVE_LIKE_SQL, params);
-        log.debug("Like removed");
+        log.debug("Лайк удалён");
     }
 
     @Override

@@ -2,8 +2,8 @@ package ru.yandex.practicum.filmorate.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,38 +11,34 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    @ExceptionHandler(ru.yandex.practicum.filmorate.exception.ValidationException.class)
-    public void handleValidationException(ru.yandex.practicum.filmorate.exception.ValidationException ex) {
-        log.warn("Validation error: {}", ex.getMessage());
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    @ExceptionHandler(ValidationException.class)
+    public ProblemDetail handleValidationException(ValidationException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler({java.util.NoSuchElementException.class})
-    public void handleNotFoundException(java.util.NoSuchElementException ex) {
-        log.warn("Not found: {}", ex.getMessage());
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+    public ProblemDetail handleNotFoundException(java.util.NoSuchElementException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public void handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
+    public ProblemDetail handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
-                .map(fieldError -> java.util.Objects.requireNonNullElse(fieldError.getDefaultMessage(), "Ошибка валидации"))
+                .map(fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "Ошибка валидации")
                 .findFirst()
                 .orElse("Ошибка валидации");
-        log.warn("Validation error (invalid argument): {}", message);
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, message);
     }
 
     @ExceptionHandler(ResponseStatusException.class)
-    public void handleResponseStatusException(ResponseStatusException ex) {
-        throw ex;
+    public ProblemDetail handleResponseStatusException(ResponseStatusException ex) {
+        String detail = ex.getReason() != null ? ex.getReason() : ex.getMessage();
+        return ProblemDetail.forStatusAndDetail(ex.getStatusCode(), detail);
     }
 
     @ExceptionHandler(Throwable.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public void handleOtherExceptions(Throwable ex) {
+    public ProblemDetail handleOtherExceptions(Throwable ex) {
         log.error("Internal server error", ex);
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Внутренняя ошибка сервера: " + ex.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Внутренняя ошибка сервера");
     }
 }

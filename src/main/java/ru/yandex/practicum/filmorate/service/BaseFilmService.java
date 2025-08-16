@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
@@ -11,7 +12,7 @@ import ru.yandex.practicum.filmorate.repository.GenreRepository;
 import ru.yandex.practicum.filmorate.repository.MpaRepository;
 import ru.yandex.practicum.filmorate.repository.UserRepository;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @Service
@@ -30,6 +31,7 @@ public class BaseFilmService implements FilmService {
     }
 
     @Override
+    @Transactional
     public Film createFilm(Film film) {
         if (film.getMpaRating() != null) {
             mpaRepository.findById(film.getMpaRating().getId())
@@ -50,9 +52,10 @@ public class BaseFilmService implements FilmService {
     }
 
     @Override
+    @Transactional
     public Film updateFilm(Film film) {
         final Film f = filmRepository.findById(film.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Фильм с id = " + film.getId() + " не найден"));
 
         final Mpa mpa = mpaRepository.findById(film.getMpaRating().getId())
@@ -66,9 +69,9 @@ public class BaseFilmService implements FilmService {
             if (genreIds.size() != genres.size()) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Жанры не найдены");
             }
-            f.setGenres(new HashSet<>(genres));
+            f.setGenres(new LinkedHashSet<>(genres));
         } else {
-            f.setGenres(new HashSet<>());
+            f.setGenres(new LinkedHashSet<>());
         }
 
         f.setName(film.getName());
