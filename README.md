@@ -82,7 +82,7 @@
 - `POST /films` — создать фильм
 - `PUT /films` — обновить фильм
 - `GET /films/{id}` — получить фильм по ID
-- `PUT /films/{id}/like/{userId}` — поставить л��йк
+- `PUT /films/{id}/like/{userId}` — поставить лайк
 - `DELETE /films/{id}/like/{userId}` — убрать лайк
 - `GET /films/popular?count={count}` — получить популярные фильмы
 
