@@ -5,26 +5,22 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.jdbc.core.RowMapper;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+@Slf4j
 @Repository
 public class JdbcUserRepository implements UserRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(JdbcUserRepository.class);
-
-    // SQL queries constants
     private static final String INSERT_USER_SQL =
             "INSERT INTO users (email, login, name, birthday) VALUES (:email, :login, :name, :birthday)";
 
@@ -59,6 +55,15 @@ public class JdbcUserRepository implements UserRepository {
             "SELECT friend_id FROM friendships WHERE user_id = :userId";
 
     private final NamedParameterJdbcOperations jdbc;
+    private static final RowMapper<User> USER_ROW_MAPPER = (rs, rowNum) -> {
+        User user = new User();
+        user.setId(rs.getInt("id"));
+        user.setEmail(rs.getString("email"));
+        user.setLogin(rs.getString("login"));
+        user.setName(rs.getString("name"));
+        user.setBirthday(rs.getDate("birthday").toLocalDate());
+        return user;
+    };
 
     public JdbcUserRepository(NamedParameterJdbcOperations jdbc) {
         this.jdbc = jdbc;
@@ -66,7 +71,7 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public User save(User user) {
-        log.debug("Saving user: {}", user);
+        log.debug("Сохранение пользователя: {}", user);
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("email", user.getEmail())
                 .addValue("login", user.getLogin())
@@ -78,17 +83,17 @@ public class JdbcUserRepository implements UserRepository {
 
         Number key = keyHolder.getKey();
         if (key == null) {
-            throw new RuntimeException("Failed to get generated key for user");
+            throw new RuntimeException("Не удалось получить сгенерированный идентификатор пользователя");
         }
         int id = key.intValue();
         user.setId(id);
-        log.debug("User saved: {}", user);
+        log.debug("Пользователь сохранён: {}", user);
         return user;
     }
 
     @Override
     public User update(User user) {
-        log.debug("Updating user: {}", user);
+        log.debug("Обновление пользователя: {}", user);
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("email", user.getEmail())
                 .addValue("login", user.getLogin())
@@ -98,18 +103,18 @@ public class JdbcUserRepository implements UserRepository {
 
         int updatedRows = jdbc.update(UPDATE_USER_SQL, params);
         if (updatedRows == 0) {
-            log.warn("User with id {} not found", user.getId());
+            log.warn("Пользователь не найден id={}", user.getId());
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Пользователь с id = " + user.getId() + " не найден");
         }
-        log.debug("User updated: {}", user);
+        log.debug("Пользователь обновлён: {}", user);
         return user;
     }
 
     @Override
     public Optional<User> findById(int id) {
         MapSqlParameterSource params = new MapSqlParameterSource("id", id);
-        List<User> users = jdbc.query(SELECT_USER_BY_ID_SQL, params, this::mapRowToUser);
+        List<User> users = jdbc.query(SELECT_USER_BY_ID_SQL, params, USER_ROW_MAPPER);
         if (users.isEmpty()) {
             return Optional.empty();
         }
@@ -120,7 +125,7 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public List<User> findAll() {
-        List<User> users = jdbc.query(SELECT_ALL_USERS_SQL, this::mapRowToUser);
+        List<User> users = jdbc.query(SELECT_ALL_USERS_SQL, USER_ROW_MAPPER);
         for (User user : users) {
             user.setFriends(loadFriends(user.getId()));
         }
@@ -129,23 +134,23 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public void addFriend(int userId, int friendId) {
-        log.debug("Adding friend {} to user {}", friendId, userId);
+        log.debug("Добавление в друзья: userId={}, friendId={}", userId, friendId);
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("userId", userId)
                 .addValue("friendId", friendId)
                 .addValue("status", FriendshipStatus.CONFIRMED.name());
         jdbc.update(ADD_FRIEND_SQL, params);
-        log.debug("Friend added");
+        log.debug("Друг добавлен");
     }
 
     @Override
     public void removeFriend(int userId, int friendId) {
-        log.debug("Removing friend {} from user {}", friendId, userId);
+        log.debug("Удаление из друзей: userId={}, friendId={}", userId, friendId);
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("userId", userId)
                 .addValue("friendId", friendId);
         jdbc.update(REMOVE_FRIEND_SQL, params);
-        log.debug("Friend removed");
+        log.debug("Друг удалён");
     }
 
     @Override
@@ -153,7 +158,7 @@ public class JdbcUserRepository implements UserRepository {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("userId", userId)
                 .addValue("status", FriendshipStatus.CONFIRMED.name());
-        return jdbc.query(SELECT_FRIENDS_SQL, params, this::mapRowToUser);
+        return jdbc.query(SELECT_FRIENDS_SQL, params, USER_ROW_MAPPER);
     }
 
     @Override
@@ -162,7 +167,7 @@ public class JdbcUserRepository implements UserRepository {
                 .addValue("userId1", userId1)
                 .addValue("userId2", userId2)
                 .addValue("status", FriendshipStatus.CONFIRMED.name());
-        return jdbc.query(SELECT_COMMON_FRIENDS_SQL, params, this::mapRowToUser);
+        return jdbc.query(SELECT_COMMON_FRIENDS_SQL, params, USER_ROW_MAPPER);
     }
 
     private Set<Integer> loadFriends(int userId) {
@@ -170,13 +175,5 @@ public class JdbcUserRepository implements UserRepository {
         return new HashSet<>(jdbc.query(SELECT_USER_FRIENDS_SQL, params, (rs, rowNum) -> rs.getInt("friend_id")));
     }
 
-    private User mapRowToUser(ResultSet rs, int rowNum) throws SQLException {
-        User user = new User();
-        user.setId(rs.getInt("id"));
-        user.setEmail(rs.getString("email"));
-        user.setLogin(rs.getString("login"));
-        user.setName(rs.getString("name"));
-        user.setBirthday(rs.getDate("birthday").toLocalDate());
-        return user;
-    }
+
 }
